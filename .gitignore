@@ -1,3 +1,12 @@
+models
+*.jpg
+*.pyc
+.*
+*.params
+*.json
+*.nd
+*/models/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
