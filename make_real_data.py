@@ -5,7 +5,7 @@ import mxnet as mx
 import numpy as np
 np.set_printoptions(precision=2)
 import cv2
-import symbol
+from texture import symbol
 
 from PIL import Image, ImageFont, ImageDraw, ImageFilter
 from transform import *
@@ -192,9 +192,9 @@ def test():
                 anno[48*ii:48*ii+48,192*jj:192*jj+192,:] = mask
         
         img = Image.fromarray(bg_img.astype(np.uint8))
-        img.save('/home/zw/dataset/scene_text/%d.jpg'%count, quality=50)
+        img.save('/home/zw/dataset/scene_text_val/%d.jpg'%count, quality=50)
         anno = anno[:,:,0].astype(np.uint8)
         anno = Image.fromarray(anno.astype(np.uint8))
-        anno.save('/home/zw/dataset/scene_text/%d.png'%count, quality=100)
+        anno.save('/home/zw/dataset/scene_text_val/%d.png'%count, quality=100)
         print count 
         count += 1

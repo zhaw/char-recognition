@@ -7,7 +7,7 @@ import symbol
 
 from PIL import Image
 
-batch_size = 8 
+batch_size = 16 
 path = '/home/zw/dataset/scene_text/'
 imgout = mx.nd.zeros([batch_size,3,384,384], mx.gpu())
 anno = mx.nd.zeros([batch_size,384,384], mx.gpu())
@@ -22,7 +22,7 @@ def get_data(batch_size, imgout, anno):
         im -= 128
         imgout[i] = im
         tmp = np.array(Image.open('%s%d.png'%(path, chose)))
-        tmp[tmp!=0] = 1
+#        tmp[tmp!=0] = 1
         anno[i] = tmp
 
 def ce_loss(label, pred):
@@ -31,9 +31,10 @@ def ce_loss(label, pred):
     pred = np.swapaxes(pred, 0, 1)
     label = np.reshape(label, [np.prod(label.shape)])
     prob = pred[np.arange(label.shape[0]), np.int64(label)]
+    prob[prob<1e-10] = 1e-10
     return -np.log(prob).sum() / label.shape[0]
 
-net = symbol.symbol(2)
+net = symbol.symbol()
 
 initializer = mx.init.Normal(1e-3)
 arg_shapes, output_shapes, aux_shapes = net.infer_shape(data=(batch_size,3,384,384), softmax_label=(batch_size,384,384))
@@ -55,7 +56,7 @@ for name in arg_names:
         initializer(name, arg_dict[name])
 net = net.bind(ctx=mx.gpu(), args=arg_dict, args_grad=grad_dict, aux_states=aux_dict, grad_req='write')
 
-optimizer = mx.optimizer.SGD(learning_rate=1e-1, wd=1e-4, momentum=0.9)
+optimizer = mx.optimizer.SGD(learning_rate=1e-1, wd=1e-6, momentum=0.9)
 optim_states = []
 for i, var in enumerate(net.grad_dict):
     if var != 'data' and var != 'softmax_label':
@@ -65,9 +66,13 @@ for i, var in enumerate(net.grad_dict):
 
 
 acc = 0
-for batch in range(50000):
-    if batch % 1000 == 0:
-        mx.nd.save('args.nd', net.arg_dict)
+precision = 0
+loss = 0
+nonzeros = 0
+for batch in range(250000):
+    if batch % 2500 == 0:
+        mx.nd.save('args2.nd', net.arg_dict)
+        mx.nd.save('auxs2.nd', net.aux_dict)
         optimizer.lr /= 2
     get_data(batch_size, imgout, anno)
     net.forward(is_train=True)
@@ -75,7 +80,9 @@ for batch in range(50000):
     for i, var in enumerate(net.grad_dict):
         if var != 'data' and var != 'softmax_label':
             optimizer.update(i, net.arg_dict[var], net.grad_dict[var], optim_states[i])
+    precision += (np.argmax(net.outputs[0].asnumpy(), axis=1)==net.arg_dict['softmax_label'].asnumpy()).mean()
+    nonzeros += (np.argmax(net.outputs[0].asnumpy(), axis=1)!=0).mean()
+    loss += ce_loss(net.arg_dict['softmax_label'].asnumpy(), net.outputs[0].asnumpy())
     if batch % 10 == 0:
-        print (np.argmax(net.outputs[0].asnumpy(), axis=1)==net.arg_dict['softmax_label'].asnumpy()).mean(),
-        print (np.argmax(net.outputs[0].asnumpy(), axis=1)!=0).mean(),
-        print ce_loss(net.arg_dict['softmax_label'].asnumpy(), net.outputs[0].asnumpy())
+        print batch, precision/10, nonzeros/10, loss/10
+        precision, nonzeros, loss = 0, 0, 0
