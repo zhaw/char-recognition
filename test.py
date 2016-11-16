@@ -77,6 +77,16 @@ class Recognizer():
         cls.save('x'+img.split('/')[-1].replace('jpg','png'))
 
 
+class D2():
+    def __init__(self):
+        size = [128,192,256,384,512,768]
+        self.ds = []
+        for s in size:
+            self.ds.append(Detector([s,s]))
+
+    def detect(self, img):
+        for d in self.ds:
+            d.detect(img)
 
 
 
@@ -89,7 +99,7 @@ class Detector():
         s1 = s1//32*32
         self.s0 = s0
         self.s1 = s1
-        net = symbol.symbol(2)
+        net = symbol.symbol()
         args = mx.nd.load('args.nd')
         auxs = mx.nd.load('auxs.nd')
         args['data'] = mx.nd.zeros([1,3,s1,s0], mx.gpu())
@@ -107,6 +117,6 @@ class Detector():
 #        plt.subplot(122)
 #        plt.imshow(maxpred)
 #        plt.show()
-        io.imsave(img.split('/')[-1], crop_img(img, (self.s0, self.s1)))
-        io.imsave(img.split('/')[-1].replace('jpg','png'), (out*255).astype(np.uint8))
+        io.imsave('result/'+img.split('/')[-1], crop_img(img, (self.s0, self.s1)))
+        io.imsave('result/'+img.split('/')[-1].replace('.jpg','_%d.png'%self.s0), (out*255).astype(np.uint8))
 

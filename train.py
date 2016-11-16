@@ -7,23 +7,38 @@ import symbol
 
 from PIL import Image
 
+
 batch_size = 16 
-path = '/home/zw/dataset/scene_text/'
+path = '/home/zw/dataset/scene_text2/'
+n = len(os.listdir(path))
 imgout = mx.nd.zeros([batch_size,3,384,384], mx.gpu())
 anno = mx.nd.zeros([batch_size,384,384], mx.gpu())
 
+
+def get_image(i):
+    chose = np.random.randint(0, n//2)
+    im = np.array(Image.open('%s%d.jpg'%(path, chose))).astype(np.float)
+    im = np.swapaxes(im, 0, 2)
+    im = np.swapaxes(im, 1, 2)
+    im -= 128
+    tmp = np.array(Image.open('%s%d.png'%(path, chose)))
+    tmp[tmp!=0] = 1
+    imgout[i] = im
+    anno[i] = tmp
+    return 0
+
 def get_data(batch_size, imgout, anno):
-    n = len(os.listdir(path))
     for i in range(batch_size):
         chose = np.random.randint(0, n//2)
         im = np.array(Image.open('%s%d.jpg'%(path, chose))).astype(np.float)
         im = np.swapaxes(im, 0, 2)
         im = np.swapaxes(im, 1, 2)
         im -= 128
-        imgout[i] = im
         tmp = np.array(Image.open('%s%d.png'%(path, chose)))
-#        tmp[tmp!=0] = 1
+        tmp[tmp!=0] = 1
+        imgout[i] = im
         anno[i] = tmp
+
 
 def ce_loss(label, pred):
     pred = np.swapaxes(pred, 0, 1)
@@ -54,6 +69,7 @@ for name in arg_names:
         pretrained['arg:'+name].copyto(arg_dict[name])
     elif name != 'data' and name != 'softmax_label':
         initializer(name, arg_dict[name])
+
 net = net.bind(ctx=mx.gpu(), args=arg_dict, args_grad=grad_dict, aux_states=aux_dict, grad_req='write')
 
 optimizer = mx.optimizer.SGD(learning_rate=1e-1, wd=1e-6, momentum=0.9)
@@ -71,10 +87,12 @@ loss = 0
 nonzeros = 0
 for batch in range(250000):
     if batch % 2500 == 0:
-        mx.nd.save('args2.nd', net.arg_dict)
-        mx.nd.save('auxs2.nd', net.aux_dict)
+        mx.nd.save('args.nd', net.arg_dict)
+        mx.nd.save('auxs.nd', net.aux_dict)
+    if batch % 25000 == 0:
         optimizer.lr /= 2
     get_data(batch_size, imgout, anno)
+#    pool.map(get_image, range(batch_size))
     net.forward(is_train=True)
     net.backward()
     for i, var in enumerate(net.grad_dict):

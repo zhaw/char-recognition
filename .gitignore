@@ -1,3 +1,6 @@
+*.pkl
+nohup.out
+result*
 models
 *.jpg
 *.pyc

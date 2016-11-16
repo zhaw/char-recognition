@@ -70,8 +70,8 @@ def get_font(font_path='/home/zw/dataset/fonts/fonts/OpenSans-Regular.ttf', text
     start = [100, 250]
     for char in text:
 #        draw.text((start[0], start[1]), char, (cls[char],cls[char],cls[char]), font=font)
-        mask[start[0]:start[0]+font.getsize(char)[1],start[1]:start[1]+font.getsize(char)[0],:] = cls[char]
-        start[1] += font.getsize(char)[0]
+        mask[start[0]+font.getoffset(char)[1]:start[0]+font.getsize(char)[1]+font.getoffset(char)[1],start[1]+font.getoffset(char)[0]:start[1]+font.getoffset(char)[0]+font.getsize(char)[0],:] = cls[char]
+        start[1] += font.getsize(char)[0]+font.getoffset(char)[0]
     img, mask = crop(img, mask, [128, 256])
     t = time.time()
     while True:
@@ -137,7 +137,7 @@ def test():
     for (i,c) in enumerate(chars):
         cls[c] = i+1
     count = 0
-    while count < 500000:
+    while count < 50000:
         t = time.time()
         if random.random() > 0.5:
             while True:
@@ -192,9 +192,12 @@ def test():
                 anno[48*ii:48*ii+48,192*jj:192*jj+192,:] = mask
         
         img = Image.fromarray(bg_img.astype(np.uint8))
-        img.save('/home/zw/dataset/scene_text_val/%d.jpg'%count, quality=50)
+        img.save('/home/zw/dataset/scene_text/%d.jpg'%count, quality=100)
         anno = anno[:,:,0].astype(np.uint8)
         anno = Image.fromarray(anno.astype(np.uint8))
-        anno.save('/home/zw/dataset/scene_text_val/%d.png'%count, quality=100)
+        anno.save('/home/zw/dataset/scene_text/%d.png'%count, quality=100)
         print count 
         count += 1
+
+if __name__ == '__main__':
+    test()
