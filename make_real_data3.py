@@ -15,6 +15,7 @@ from PATH import *
 
 np.set_printoptions(precision=2)
 N = int(sys.argv[1])
+TOTAL = int(sys.argv[2])
 
 
 
@@ -42,7 +43,7 @@ def get_font(font_path=os.path.join(FONTPATH, 'OpenSans-Regular.ttf'), text=['qw
 #    img = img.filter(ImageFilter.GaussianBlur(3))
 #    mask = Image.new("RGB", (2000, 400),(0,0,0))
 #    draw = ImageDraw.Draw(mask)
-    instance = np.zeros([1000,2000,3], np.float64)
+    instance = np.zeros([1000,2000,3], np.uint8)
     instance_cls = {}
     idx = 0
     for x,y,line in zip(x_start, y_start, text):
@@ -52,7 +53,7 @@ def get_font(font_path=os.path.join(FONTPATH, 'OpenSans-Regular.ttf'), text=['qw
             instance[y+font.getoffset(char)[1]:y+font.getoffset(char)[1]+font.getsize(char)[1],xt+font.getoffset(char)[0]:xt+font.getoffset(char)[0]+font.getsize(char)[0],:] = idx
             instance_cls[idx] = cls[char]
             xt += font.getsize(char)[0]+font.getoffset(char)[0]
-    img, instance = crop(img, instance, [256, 512])
+    img, instance = crop(img, instance, [256, 512], border=10)
     while True:
         pos0 = np.random.normal(0, 0.25)
         pos1 = np.random.normal(0, 0.25)
@@ -64,7 +65,7 @@ def get_font(font_path=os.path.join(FONTPATH, 'OpenSans-Regular.ttf'), text=['qw
         break
     img, instance = crop(img, instance, [192, 384], border=10)
     img, instance = proj(img, instance , 0.25)
-    img, instance = crop(img, instance, [96, 192], border=0, center=True)
+    img, instance = crop(img, instance, [96, 192], border=5, center=True)
     img = Image.fromarray(img)
     img = img.filter(ImageFilter.GaussianBlur(np.random.rand()*0.8))
     img = np.array(img)
@@ -157,7 +158,7 @@ def test():
     for (i,c) in enumerate(chars):
         cls[c] = i
     count = 0
-    while count < 10000:
+    while count < TOTAL:
         t = time.time()
 
         scbg = np.random.rand() > 0.7
@@ -212,7 +213,7 @@ def test():
                 else:
                     font_path = random.choice(all_font)
                 if short:
-                    font_size = 160
+                    font_size = 160 
                 else:
                     font_size = 40
                 try:
@@ -289,7 +290,7 @@ def test():
         anno = Image.fromarray(anno.astype(np.uint8))
         anno.save(os.path.join(DATAPATH, '%d.png'%(N+count)), quality=100)
         with open(os.path.join(DATAPATH, '%d.pkl'%(N+count)), 'w') as f:
-            pickle.dump(anno_r, f)
+            pickle.dump([anno_r[:,:,:2].astype(np.float16), anno_r[:,:,2].astype(np.uint8)], f)
         print count 
         count += 1
 

@@ -39,8 +39,8 @@ def crop(img, mask, size, center=True, border=10):
     np_mask= np_mask[left:right+1, top:bottom+1]
     factor = min(1.*(size[0]-border)/np_img.shape[0], 1.*(size[1]-border)/np_img.shape[1])
     if factor < 1:
-        np_img = cv2.resize(np_img, (int(factor*np_img.shape[1]), int(factor*np_img.shape[0])), cv2.INTER_CUBIC)
-        np_mask = cv2.resize(np_mask, (int(factor*np_mask.shape[1]), int(factor*np_mask.shape[0])), cv2.INTER_NEAREST)
+        np_img = cv2.resize(np_img, (int(factor*np_img.shape[1]), int(factor*np_img.shape[0])), interpolation=cv2.INTER_CUBIC)
+        np_mask = cv2.resize(np_mask, (int(factor*np_mask.shape[1]), int(factor*np_mask.shape[0])), interpolation=cv2.INTER_NEAREST)
     width, height = np_img.shape[:2]
     if center:
         lcrop = (size[0]-width) / 2
