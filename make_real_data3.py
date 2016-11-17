@@ -1,25 +1,24 @@
 import time
 import random
 import os
+import sys
 import mxnet as mx
 import numpy as np
 import random
 import string
 import cPickle as pickle
-np.set_printoptions(precision=2)
 
 from PIL import Image, ImageFont, ImageDraw, ImageFilter
-from transform import *
 from skimage import io, transform, morphology
+from transform import *
+from PATH import *
 
-import sys
+np.set_printoptions(precision=2)
 N = int(sys.argv[1])
 
 
-VGGPATH = './vgg19.params'
 
-
-def get_font(font_path='/home/zw/dataset/fonts/fonts/OpenSans-Regular.ttf', text=['qwerty'], cls={}): 
+def get_font(font_path=os.path.join(FONTPATH, 'OpenSans-Regular.ttf'), text=['qwerty'], cls={}): 
     t = time.time()
     font = ImageFont.truetype(font_path, 40)
     img = Image.new("RGB", (2000, 1000),(0,0,0))
@@ -102,11 +101,8 @@ def test():
         im[im>255] = 255
         return im.astype(np.uint8)
 
-
-    font_dir = '/home/zw/dataset/fonts/fonts/'
-    img_dir = '/home/zw/dataset/mscoco/'
-    font_d = os.listdir(font_dir)
-    img_d = os.listdir(img_dir)
+    font_d = os.listdir(FONTPATH)
+    img_d = os.listdir(COCOPATH)
     try:
         with open('bold_font.pkl') as f:
             bold_font = pickle.load(f)
@@ -242,10 +238,10 @@ def test():
 #        io.show()
         
         img = Image.fromarray(bg_img.astype(np.uint8))
-        img.save('/home/zw/dataset/scene_text2/%d.jpg'%(N+count), quality=100)
+        img.save(os.path.join(SAVEPATH, '%d.jpg'%(N+count)), quality=100)
         anno = anno[:,:,0].astype(np.uint8)
         anno = Image.fromarray(anno.astype(np.uint8))
-        anno.save('/home/zw/dataset/scene_text2/%d.png'%(N+count), quality=100)
+        anno.save(os.path.join(SAVEPATH, '%d.png'%(N+count)), quality=100)
         print count 
         count += 1
 

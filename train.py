@@ -6,22 +6,22 @@ import cv2
 import symbol
 
 from PIL import Image
+from PATH import *
 
 
-batch_size = 16 
-path = '/home/zw/dataset/scene_text2/'
-n = len(os.listdir(path))
+batch_size = 4 
+n = len(os.listdir(DATAPATH))
 imgout = mx.nd.zeros([batch_size,3,384,384], mx.gpu())
 anno = mx.nd.zeros([batch_size,384,384], mx.gpu())
 
 
 def get_image(i):
     chose = np.random.randint(0, n//2)
-    im = np.array(Image.open('%s%d.jpg'%(path, chose))).astype(np.float)
+    im = np.array(Image.open(os.path.join(DATAPATH, '%d.jpg'%chose))).astype(np.float)
     im = np.swapaxes(im, 0, 2)
     im = np.swapaxes(im, 1, 2)
     im -= 128
-    tmp = np.array(Image.open('%s%d.png'%(path, chose)))
+    tmp = np.array(Image.open(os.path.join(DATAPATH, '%d.png'%chose)))
     tmp[tmp!=0] = 1
     imgout[i] = im
     anno[i] = tmp
@@ -30,11 +30,11 @@ def get_image(i):
 def get_data(batch_size, imgout, anno):
     for i in range(batch_size):
         chose = np.random.randint(0, n//2)
-        im = np.array(Image.open('%s%d.jpg'%(path, chose))).astype(np.float)
+        im = np.array(Image.open(os.path.join(DATAPATH, '%d.jpg'%chose))).astype(np.float)
         im = np.swapaxes(im, 0, 2)
         im = np.swapaxes(im, 1, 2)
         im -= 128
-        tmp = np.array(Image.open('%s%d.png'%(path, chose)))
+        tmp = np.array(Image.open(os.path.join(DATAPATH, '%d.png'%chose)))
         tmp[tmp!=0] = 1
         imgout[i] = im
         anno[i] = tmp

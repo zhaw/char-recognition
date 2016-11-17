@@ -33,9 +33,9 @@ def symbol(n_class=63):
     data = block(data, 64, 'block1')
     data = block(data, 64, 'block2')
     data = block(data, 64, 'block3')
-#    data = block(data, 64, 'block4')
-#    data = block(data, 64, 'block5')
-#    data = block(data, 64, 'block6')
+    data = block(data, 64, 'block4')
+    data = block(data, 64, 'block5')
+    data = block(data, 64, 'block6')
     data = mx.sym.Deconvolution(data=data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=64, name='last_deconv')
     data = mx.sym.BatchNorm(data=data, name='last_deconvbn')
     data = mx.sym.Activation(data=data, act_type='relu')
@@ -44,7 +44,7 @@ def symbol(n_class=63):
     data = mx.sym.SoftmaxOutput(data=data, multi_output=True, name='softmax')
     return data
 
-def symbol(n_class=63):
+def symbol2(n_class=63):
     data = mx.sym.Variable('data')
     data = conv(data, 7, 64, 2, 3, '1')
     data = conv(data, 3, 96, 1, 1, '2')
