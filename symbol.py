@@ -15,9 +15,10 @@ def res_block(data, num_filter, name):
     return data
 
 def block(data, num_filter, name):
-    data_d = conv(data, 3, num_filter*2, 2, 1, '%s_downconv'%name) 
+    data_d = conv(data, 5, num_filter*2, 2, 2, '%s_downconv'%name) 
     data_d = res_block(data_d, num_filter*2, '%s_downres1'%name)
     data_d = res_block(data_d, num_filter*2, '%s_downres2'%name)
+    data = conv(data, 5, num_filter, 1, 2, '%s_downconv2'%name) 
     data = res_block(data, num_filter, '%s_res1'%name)
     data = res_block(data, num_filter, '%s_res2'%name)
     data = res_block(data, num_filter, '%s_res3'%name)
@@ -29,14 +30,14 @@ def block(data, num_filter, name):
 
 def symbol(n_class=63):
     data = mx.sym.Variable('data')
-    data = conv(data, 7, 64, 2, 3, 'first') # 192
-    data = block(data, 64, 'block1')
-    data = block(data, 64, 'block2')
-    data = block(data, 64, 'block3')
-    data = block(data, 64, 'block4')
-    data = block(data, 64, 'block5')
-    data = block(data, 64, 'block6')
-    data = mx.sym.Deconvolution(data=data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=64, name='last_deconv')
+    data = conv(data, 7, 128, 2, 3, 'first') # 192
+    data = block(data, 128, 'block1')
+    data = block(data, 128, 'block2')
+    data = block(data, 128, 'block3')
+    data = block(data, 128, 'block4')
+    data = block(data, 128, 'block5')
+    data = block(data, 128, 'block6')
+    data = mx.sym.Deconvolution(data=data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=256, name='last_deconv')
     data = mx.sym.BatchNorm(data=data, name='last_deconvbn')
     data = mx.sym.Activation(data=data, act_type='relu')
 #    data = mx.sym.Dropout(data=data, p=0.5, name='dropout')

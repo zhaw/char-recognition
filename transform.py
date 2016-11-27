@@ -1,6 +1,15 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
+from skimage.transform import rotate as skrotate
+
+def rotate(img, mask, angle):
+    angle = np.random.uniform(-1,1) * angle
+    imr = skrotate(img, angle, order=2)
+    imr *= 255
+    maskr = skrotate(mask, angle, order=0)
+    maskr *= 255
+    return imr.astype(np.uint8), maskr.astype(np.uint8)
 
 
 def proj(img, mask, factor=0.25):

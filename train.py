@@ -9,14 +9,14 @@ from PIL import Image
 from PATH import *
 
 
-batch_size = 4 
+batch_size = 1
 n = len(os.listdir(DATAPATH))
 imgout = mx.nd.zeros([batch_size,3,384,384], mx.gpu())
 anno = mx.nd.zeros([batch_size,384,384], mx.gpu())
 
 
 def get_image(i):
-    chose = np.random.randint(0, n//2)
+    chose = np.random.randint(0, n//3)
     im = np.array(Image.open(os.path.join(DATAPATH, '%d.jpg'%chose))).astype(np.float)
     im = np.swapaxes(im, 0, 2)
     im = np.swapaxes(im, 1, 2)
@@ -29,13 +29,13 @@ def get_image(i):
 
 def get_data(batch_size, imgout, anno):
     for i in range(batch_size):
-        chose = np.random.randint(0, n//2)
+        chose = np.random.randint(0, n//3)
         im = np.array(Image.open(os.path.join(DATAPATH, '%d.jpg'%chose))).astype(np.float)
         im = np.swapaxes(im, 0, 2)
         im = np.swapaxes(im, 1, 2)
         im -= 128
         tmp = np.array(Image.open(os.path.join(DATAPATH, '%d.png'%chose)))
-        tmp[tmp!=0] = 1
+#         tmp[tmp!=0] = 1
         imgout[i] = im
         anno[i] = tmp
 
@@ -63,11 +63,11 @@ grad_dict = {}
 for k in arg_dict:
     if k != 'data' and k != 'softmax_label':
         grad_dict[k] = arg_dict[k].copyto(mx.gpu())
-pretrained = mx.nd.load('imagenet-0005.params')
+# pretrained = mx.nd.load('imagenet-0005.params')
 for name in arg_names:
-    if 'arg:'+name in pretrained:
-        pretrained['arg:'+name].copyto(arg_dict[name])
-    elif name != 'data' and name != 'softmax_label':
+#     if 'arg:'+name in pretrained:
+#         pretrained['arg:'+name].copyto(arg_dict[name])
+    if name != 'data' and name != 'softmax_label':
         initializer(name, arg_dict[name])
 
 net = net.bind(ctx=mx.gpu(), args=arg_dict, args_grad=grad_dict, aux_states=aux_dict, grad_req='write')
@@ -85,11 +85,11 @@ acc = 0
 precision = 0
 loss = 0
 nonzeros = 0
-for batch in range(250000):
+for batch in range(2500000):
     if batch % 2500 == 0:
-        mx.nd.save('args.nd', net.arg_dict)
-        mx.nd.save('auxs.nd', net.aux_dict)
-    if batch % 25000 == 0:
+        mx.nd.save('args_res63.nd', net.arg_dict)
+        mx.nd.save('auxs_res63.nd', net.aux_dict)
+    if batch % 50000 == 0:
         optimizer.lr /= 2
     get_data(batch_size, imgout, anno)
 #    pool.map(get_image, range(batch_size))

@@ -1,6 +1,6 @@
 PATH.py
 *.pkl
-nohup.out
+*.out
 result*
 models
 *.jpg

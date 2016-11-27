@@ -2,6 +2,7 @@ import time
 import random
 import os
 import sys
+import re
 import mxnet as mx
 import numpy as np
 import random
@@ -17,24 +18,40 @@ np.set_printoptions(precision=2)
 N = int(sys.argv[1])
 TOTAL = int(sys.argv[2])
 
+class WordStream():
+    def __init__(self):
+        self.files = os.listdir(WIKIPATH)
+        self.words = []
+        self.transforms = [lambda x:x.upper(), lambda x:x.lower(), lambda x:x.capitalize()]
+    def provide(self):
+        t = np.random.choice(self.transforms, p=[0.2, 0.6, 0.2])
+        if not self.words:
+            f = self.files.pop()
+            with open(os.path.join(WIKIPATH, f)) as f:
+                text = f.read()
+            self.words = re.findall('''[0-9a-zA-Z]+''', text)
+        return t(self.words.pop(0))
 
 
 def get_font(font_path=os.path.join(FONTPATH, 'OpenSans-Regular.ttf'), text=['qwerty'], cls={}, size=160): 
     t = time.time()
-    font = ImageFont.truetype(font_path, size)
-    img = Image.new("RGB", (2000, 1000),(0,0,0))
+    img = Image.new("RGB", (2000, 500),(0,0,0))
     draw = ImageDraw.Draw(img)
     y_start = [50]
     x_start = []
+    fonts = []
 
     for line in text:
-        x_start.append(500 + np.random.randint(-size/2,size/2))
+        size0 = int(size*np.random.uniform(0.5,1.5))
+        font = ImageFont.truetype(font_path, size0)
+        fonts.append(font)
+        x_start.append(200 + np.random.randint(-size/2,size/2))
         max_height = 0
         tmp = x_start[-1]
         for char in line:
             draw.text((tmp, y_start[-1]), char, (255,255,255), font=font)
             tmp += font.getsize(char)[0]
-            max_height = max(max_height, font.getsize(char)[1])
+            max_height = max(max_height, font.getoffset(char)[1]+font.getsize(char)[1])
         y_start.append(y_start[-1]+max_height+np.random.randint(0,size/4))
     y_start.pop()
     img = np.array(img)
@@ -43,29 +60,31 @@ def get_font(font_path=os.path.join(FONTPATH, 'OpenSans-Regular.ttf'), text=['qw
 #    img = img.filter(ImageFilter.GaussianBlur(3))
 #    mask = Image.new("RGB", (2000, 400),(0,0,0))
 #    draw = ImageDraw.Draw(mask)
-    instance = np.zeros([1000,2000,3], np.uint8)
+    instance = np.zeros([500,2000,3], np.uint8)
     instance_cls = {}
     idx = 0
-    for x,y,line in zip(x_start, y_start, text):
+    for x,y,line,font in zip(x_start, y_start, text, fonts):
         xt = x
         for char in line:
             idx += 1
             instance[y+font.getoffset(char)[1]:y+font.getoffset(char)[1]+font.getsize(char)[1],xt+font.getoffset(char)[0]:xt+font.getoffset(char)[0]+font.getsize(char)[0],:] = idx
             instance_cls[idx] = cls[char]
             xt += font.getsize(char)[0]+font.getoffset(char)[0]
-    img, instance = crop(img, instance, [256, 512], border=10)
+    img, instance = crop(img, instance, [1024, 1024], border=200, center=True)
+    img, instance = rotate(img, instance, 15)
+    img, instance = crop(img, instance, [256, 1024], border=20, center=True)
     while True:
-        pos0 = np.random.normal(0, 0.25)
-        pos1 = np.random.normal(0, 0.25)
-        scale0 = abs(np.random.normal(0, 0.5))
-        scale1 = abs(np.random.normal(0, 0.5))
+        pos0 = np.clip(np.random.normal(0, 0.25), -0.5, 0.5)
+        pos1 = np.clip(np.random.normal(0, 0.25), -0.5, 0.5)
+        scale0 = np.clip(abs(np.random.normal(0, 0.5)), 0, 0.5)
+        scale1 = np.clip(abs(np.random.normal(0, 0.5)), 0, 0.5)
 #        if abs(pos0)+abs(scale0) > 1.25 or abs(pos1)+abs(scale1) > 1.25:
 #            continue
         img, instance = spherical(img, instance, pos=[pos0,pos1], scale=[scale0, scale1])
         break
-    img, instance = crop(img, instance, [192, 384], border=10)
-    img, instance = proj(img, instance , 0.25)
-    img, instance = crop(img, instance, [96, 192], border=5, center=True)
+    img, instance = crop(img, instance, [192, 768], border=10, center=True)
+    img, instance = proj(img, instance , 0.2)
+    img, instance = crop(img, instance, [96, 384], border=5, center=True)
     img = Image.fromarray(img)
     img = img.filter(ImageFilter.GaussianBlur(np.random.rand()*0.8))
     img = np.array(img)
@@ -130,6 +149,7 @@ def test():
 
     font_d = os.listdir(FONTPATH)
     img_d = os.listdir(COCOPATH)
+    word_stream = WordStream()
     try:
         with open('bold_font.pkl') as f:
             bold_font = pickle.load(f)
@@ -190,7 +210,7 @@ def test():
         anno_r = np.zeros_like(bg_img)
 
         for ii in range(4):
-            for jj in range(2):
+            for jj in range(1):
                 padding = np.random.rand() > 0.75 and scfg
                 if padding or not scfg:
                     need_bold = 1
@@ -199,37 +219,38 @@ def test():
                 if short:
                     lines = np.random.randint(1,3)
                 else:
-                    lines = np.random.randint(3,8)
+                    lines = np.random.randint(3,5)
                 text = []
                 if short:
                     for i in range(lines):
-                        text.append(''.join([random.choice(chars) for i in range(random.randint(1,5))]))
+                        text.append(' '.join([word_stream.provide() for i in range(random.randint(1,3))]))
+                    word_stream.words = word_stream.words[np.random.randint(100):]
                 else:
                     for i in range(lines):
-                        text.append(''.join([random.choice(chars) for i in range(random.randint(5,20))]))
-
+                        text.append(' '.join([word_stream.provide() for i in range(random.randint(3,5))]))
+                    word_stream.words = word_stream.words[np.random.randint(100):]
                 if need_bold:
                     font_path = random.choice(bold_font)
                 else:
                     font_path = random.choice(all_font)
                 if short:
-                    font_size = 160 
+                    font_size = 120 
                 else:
                     font_size = 40
                 try:
                     image, mask, instance = get_font(font_path, text, cls, font_size)
                 except Exception as e:
                     print e
-                    image = np.zeros([96,192,3])
-                    mask = np.zeros([96,192,3])
-                    instance = np.zeros([96,192,3])
+                    image = np.zeros([96,384,3])
+                    mask = np.zeros([96,384,3])
+                    instance = np.zeros([96,384,3])
                 padding_image = np.expand_dims(image[:,:,1], 2)
                 padding_image = np.tile(padding_image, [1,1,3])
                 if not padding:
                     padding_image[:] = 0
                 image[:,:,1] = image[:,:,0]
                 image[:,:,2] = image[:,:,0]
-                bg_avg = bg_img[96*ii:96*ii+96,192*jj:192*jj+192,:].mean(axis=0).mean(axis=0)
+                bg_avg = bg_img[96*ii:96*ii+96,384*jj:384*jj+384,:].mean(axis=0).mean(axis=0)
                 if not scfg:
                     while True:
                         try:
@@ -239,12 +260,12 @@ def test():
                         if fg_img is None:
                             continue
                         fg_size = fg_img.shape
-                        if fg_size[0] < 97 or fg_size[1] < 193 or len(fg_size) != 3:
+                        if fg_size[0] < 97 or fg_size[1] < 385 or len(fg_size) != 3:
                             continue
                         xstart = np.random.randint(0, fg_size[0]-96)
-                        ystart = np.random.randint(0, fg_size[1]-192)
-                        fg_img = fg_img[xstart:xstart+96,ystart:ystart+192,:].astype(np.float)
-                        if fg_img.shape != (96,192,3):
+                        ystart = np.random.randint(0, fg_size[1]-384)
+                        fg_img = fg_img[xstart:xstart+96,ystart:ystart+384,:].astype(np.float)
+                        if fg_img.shape != (96,384,3):
                             continue
                         fg_avg = fg_img.mean(axis=0).mean(axis=0)
                         if np.sum(np.abs(fg_avg-bg_avg)) < 300:
@@ -256,7 +277,7 @@ def test():
                         if np.abs(fg_color-bg_avg).sum() < 300:
                             continue
                         break
-                    fg_img = np.ones([96,192,3])
+                    fg_img = np.ones([96,384,3])
                     for i in range(3):
                         fg_img[:,:,i] = fg_color[i]
                     fg_avg = fg_color
@@ -276,10 +297,10 @@ def test():
 #                image[image>0.5] = 1
 #                padding_image[padding_image<0.5] = 0
 #                padding_image[padding_image>0.5] = 1
-                bg_img[96*ii:96*ii+96,192*jj:192*jj+192,:] = bg_img[96*ii:96*ii+96,192*jj:192*jj+192,:]*(1-padding_image)+pd_color*padding_image
-                bg_img[96*ii:96*ii+96,192*jj:192*jj+192,:] = bg_img[96*ii:96*ii+96,192*jj:192*jj+192,:]*(1-image)+fg_img*image
-                anno[96*ii:96*ii+96,192*jj:192*jj+192,:] = mask
-                anno_r[96*ii:96*ii+96,192*jj:192*jj+192,:] = instance 
+                bg_img[96*ii:96*ii+96,384*jj:384*jj+384,:] = bg_img[96*ii:96*ii+96,384*jj:384*jj+384,:]*(1-padding_image)+pd_color*padding_image
+                bg_img[96*ii:96*ii+96,384*jj:384*jj+384,:] = bg_img[96*ii:96*ii+96,384*jj:384*jj+384,:]*(1-image)+fg_img*image
+                anno[96*ii:96*ii+96,384*jj:384*jj+384,:] = mask
+                anno_r[96*ii:96*ii+96,384*jj:384*jj+384,:] = instance 
         bg_img = bg_img.astype(np.uint8)
 #        io.imshow(bg_img)
 #        io.show()
