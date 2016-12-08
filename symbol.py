@@ -45,6 +45,27 @@ def symbol(n_class=63):
     data = mx.sym.SoftmaxOutput(data=data, multi_output=True, name='softmax')
     return data
 
+def reg_symbol(n_class=63):
+    data = mx.sym.Variable('data')
+    data = conv(data, 7, 128, 2, 3, 'first') # 192
+    data = block(data, 128, 'block1')
+    data = block(data, 128, 'block2')
+    data = block(data, 128, 'block3')
+    data = block(data, 128, 'block4')
+    data = block(data, 128, 'block5')
+    data = block(data, 128, 'block6')
+    data = mx.sym.Deconvolution(data=data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=256, name='last_deconv')
+    data = mx.sym.BatchNorm(data=data, name='last_deconvbn')
+    data = mx.sym.Activation(data=data, act_type='relu')
+#    data = mx.sym.Dropout(data=data, p=0.5, name='dropout')
+    reg_data = conv(data, 3, 256, 1, 1, 'reg_conv')
+    reg_data = mx.sym.Convolution(data=reg_data, kernel=(3,3), num_filter=2, pad=(1,1), stride=(1,1), name='reg_score')
+#     reg_data = mx.sym.LinearRegressionOutput(data=reg_data, grad_scale=1e-1, name='linear_regression')
+    data = mx.sym.Convolution(data=data, kernel=(3,3), num_filter=n_class, pad=(1,1), stride=(1,1), name='score')
+#     data = mx.sym.SoftmaxOutput(data=data, multi_output=True, name='softmax')
+    out = mx.sym.Group([data, reg_data])
+    return out 
+
 def symbol2(n_class=63):
     data = mx.sym.Variable('data')
     data = conv(data, 7, 64, 2, 3, '1')

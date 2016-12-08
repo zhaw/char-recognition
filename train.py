@@ -8,11 +8,12 @@ import symbol
 from PIL import Image
 from PATH import *
 
-
+ctx = mx.gpu(0)
 batch_size = 1
 n = len(os.listdir(DATAPATH))
-imgout = mx.nd.zeros([batch_size,3,384,384], mx.gpu())
-anno = mx.nd.zeros([batch_size,384,384], mx.gpu())
+n = 750000
+imgout = mx.nd.zeros([batch_size,3,384,384], ctx)
+anno = mx.nd.zeros([batch_size,384,384], ctx)
 
 
 def get_image(i):
@@ -22,7 +23,9 @@ def get_image(i):
     im = np.swapaxes(im, 1, 2)
     im -= 128
     tmp = np.array(Image.open(os.path.join(DATAPATH, '%d.png'%chose)))
-    tmp[tmp!=0] = 1
+#     tmp[tmp!=0] = 1
+    for i in range(26):
+        tmp[tmp==(27+i)] = 1+i
     imgout[i] = im
     anno[i] = tmp
     return 0
@@ -36,6 +39,8 @@ def get_data(batch_size, imgout, anno):
         im -= 128
         tmp = np.array(Image.open(os.path.join(DATAPATH, '%d.png'%chose)))
 #         tmp[tmp!=0] = 1
+        for j in range(26):
+            tmp[tmp==(27+j)] = 1+j
         imgout[i] = im
         anno[i] = tmp
 
@@ -54,15 +59,15 @@ net = symbol.symbol()
 initializer = mx.init.Normal(1e-3)
 arg_shapes, output_shapes, aux_shapes = net.infer_shape(data=(batch_size,3,384,384), softmax_label=(batch_size,384,384))
 arg_names = net.list_arguments()
-arg_dict = dict(zip(arg_names, [mx.nd.zeros(shape, ctx=mx.gpu()) for shape in arg_shapes]))
+arg_dict = dict(zip(arg_names, [mx.nd.zeros(shape, ctx=ctx) for shape in arg_shapes]))
 arg_dict['data'] = imgout
 arg_dict['softmax_label'] = anno
 aux_names = net.list_auxiliary_states()
-aux_dict = dict(zip(aux_names, [mx.nd.zeros(shape, ctx=mx.gpu()) for shape in aux_shapes]))
+aux_dict = dict(zip(aux_names, [mx.nd.zeros(shape, ctx=ctx) for shape in aux_shapes]))
 grad_dict = {}
 for k in arg_dict:
     if k != 'data' and k != 'softmax_label':
-        grad_dict[k] = arg_dict[k].copyto(mx.gpu())
+        grad_dict[k] = arg_dict[k].copyto(ctx)
 # pretrained = mx.nd.load('imagenet-0005.params')
 for name in arg_names:
 #     if 'arg:'+name in pretrained:
@@ -70,7 +75,7 @@ for name in arg_names:
     if name != 'data' and name != 'softmax_label':
         initializer(name, arg_dict[name])
 
-net = net.bind(ctx=mx.gpu(), args=arg_dict, args_grad=grad_dict, aux_states=aux_dict, grad_req='write')
+net = net.bind(ctx=ctx, args=arg_dict, args_grad=grad_dict, aux_states=aux_dict, grad_req='write')
 
 optimizer = mx.optimizer.SGD(learning_rate=1e-1, wd=1e-6, momentum=0.9)
 optim_states = []
@@ -87,8 +92,14 @@ loss = 0
 nonzeros = 0
 for batch in range(2500000):
     if batch % 2500 == 0:
-        mx.nd.save('args_res63.nd', net.arg_dict)
-        mx.nd.save('auxs_res63.nd', net.aux_dict)
+        args_to_save = {}
+        auxs_to_save = {}
+        for k in net.arg_dict:
+            args_to_save[k] = net.arg_dict[k].copyto(mx.cpu())
+        for k in net.aux_dict:
+            auxs_to_save[k] = net.aux_dict[k].copyto(mx.cpu())
+        mx.nd.save('args_res37.nd', args_to_save) # avoid device ordinal problem
+        mx.nd.save('auxs_res37.nd', auxs_to_save)
     if batch % 50000 == 0:
         optimizer.lr /= 2
     get_data(batch_size, imgout, anno)
