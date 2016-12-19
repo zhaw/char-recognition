@@ -14,7 +14,7 @@ pool = Pool(12)
 
 alpha = 1e-2
 batch_size = 480
-ctx = mx.gpu(0)
+ctx = mx.gpu(1)
 n = len(os.listdir(DATAPATH))
 n = 1500000 
 imgout = mx.nd.zeros([1,3,384,384], ctx)
@@ -81,7 +81,7 @@ def get_data(batch_size, imgout, anno_np, reg_anno_np):
         reg_anno_np[i] = np.tile(d[0], [37,1,1])
 
 
-net = symbol.reg_symbol(37)
+net = symbol.reg_symbol_simple(37)
 
 initializer = mx.init.Normal(1e-3)
 arg_shapes, output_shapes, aux_shapes = net.infer_shape(data=(batch_size,3,384,384)) 
@@ -96,8 +96,8 @@ grad_dict = {}
 for k in arg_dict:
     if k != 'data' and k != 'softmax_label' and k != 'linear_regression_label':
         grad_dict[k] = arg_dict[k].copyto(ctx)
-pretrained_args = mx.nd.load('args_res37.nd')
-pretrained_auxs = mx.nd.load('auxs_res37.nd')
+pretrained_args = {} #mx.nd.load('args_res37.nd')
+pretrained_auxs = {} #mx.nd.load('auxs_res37.nd')
 for name in arg_names:
 #     if 'arg:'+name in pretrained:
 #         pretrained['arg:'+name].copyto(arg_dict[name])
@@ -117,7 +117,7 @@ for name in aux_names:
 
 net = net.bind(ctx=ctx, args=arg_dict, args_grad=grad_dict, aux_states=aux_dict, grad_req='write')
 
-optimizer = mx.optimizer.SGD(learning_rate=1e-8, wd=1e-6, momentum=0.9)
+optimizer = mx.optimizer.SGD(learning_rate=1e-4, wd=1e-6, momentum=0.9)
 optim_states = []
 for i, var in enumerate(net.grad_dict):
     if var != 'data':
@@ -139,8 +139,8 @@ for batch in range(1, 2500000):
             args_to_save[k] = net.arg_dict[k].copyto(mx.cpu())
         for k in net.aux_dict:
             auxs_to_save[k] = net.aux_dict[k].copyto(mx.cpu())
-        mx.nd.save('args_reg37s.nd', args_to_save) # avoid device ordinal problem
-        mx.nd.save('auxs_reg37s.nd', auxs_to_save)
+        mx.nd.save('args_reg37ss.nd', args_to_save) # avoid device ordinal problem
+        mx.nd.save('auxs_reg37ss.nd', auxs_to_save)
     if batch % 20 == 0:
         optimizer.lr /= 2
         anno[:] = anno_np

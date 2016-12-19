@@ -45,6 +45,48 @@ def symbol(n_class=63):
     data = mx.sym.SoftmaxOutput(data=data, multi_output=True, name='softmax')
     return data
 
+
+def only_reg_symbol():
+    data = mx.sym.Variable('data')
+    data = conv(data, 7, 128, 2, 3, 'first') # 192
+    data = block(data, 128, 'block1')
+    data = block(data, 128, 'block2')
+    data = block(data, 128, 'block3')
+    data = block(data, 128, 'block4')
+    data = block(data, 128, 'block5')
+    data = block(data, 128, 'block6')
+    data = mx.sym.Deconvolution(data=data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=256, name='last_deconv')
+    data = mx.sym.BatchNorm(data=data, name='last_deconvbn')
+    data = mx.sym.Activation(data=data, act_type='relu')
+#    data = mx.sym.Dropout(data=data, p=0.5, name='dropout')
+    data = mx.sym.Convolution(data=data, kernel=(1,1), num_filter=2, pad=(0,0), stride=(1,1), name='score')
+    data = mx.sym.LinearRegressionOutput(data=data, name='linear_regression')
+    return data
+
+def reg_symbol_simple(n_class=63):
+    data = mx.sym.Variable('data')
+    data = conv(data, 7, 128, 2, 3, 'first') # 192
+    data = block(data, 128, 'block1')
+    data = block(data, 128, 'block2')
+    data = block(data, 128, 'block3')
+#     data = block(data, 128, 'block4')
+#     data = block(data, 128, 'block5')
+#     data = block(data, 128, 'block6')
+    reg_data = block(data, 128, 'reg_block1')
+#     reg_data = block(reg_data, 128, 'reg_block2')
+#     reg_data = block(reg_data, 128, 'reg_block3')
+    reg_data = mx.sym.Deconvolution(data=reg_data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=256, name='reg_last_deconv')
+    reg_data = mx.sym.BatchNorm(data=reg_data, name='reg_last_deconvbn')
+    reg_data = mx.sym.Activation(data=reg_data, act_type='relu')
+    reg_data = mx.sym.Convolution(data=reg_data, kernel=(3,3), num_filter=74, pad=(1,1), stride=(1,1), name='reg_score')
+    data = mx.sym.Deconvolution(data=data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=256, name='last_deconv')
+    data = mx.sym.BatchNorm(data=data, name='last_deconvbn')
+    data = mx.sym.Activation(data=data, act_type='relu')
+    data = mx.sym.Convolution(data=data, kernel=(3,3), num_filter=n_class, pad=(1,1), stride=(1,1), name='score')
+    out = mx.sym.Group([data, reg_data])
+    return out 
+
+
 def reg_symbol(n_class=63):
     data = mx.sym.Variable('data')
     data = conv(data, 7, 128, 2, 3, 'first') # 192
@@ -55,12 +97,12 @@ def reg_symbol(n_class=63):
     data = block(data, 128, 'block5')
     data = block(data, 128, 'block6')
     reg_data = block(data, 128, 'reg_block1')
-    reg_data = block(reg_data, 128, 'reg_block2')
-    reg_data = block(reg_data, 128, 'reg_block3')
+#     reg_data = block(reg_data, 128, 'reg_block2')
+#     reg_data = block(reg_data, 128, 'reg_block3')
     reg_data = mx.sym.Deconvolution(data=reg_data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=256, name='reg_last_deconv')
     reg_data = mx.sym.BatchNorm(data=reg_data, name='reg_last_deconvbn')
     reg_data = mx.sym.Activation(data=reg_data, act_type='relu')
-    reg_data = mx.sym.Convolution(data=reg_data, kernel=(3,3), num_filter=2, pad=(1,1), stride=(1,1), name='reg_score')
+    reg_data = mx.sym.Convolution(data=reg_data, kernel=(3,3), num_filter=74, pad=(1,1), stride=(1,1), name='reg_score')
     data = mx.sym.Deconvolution(data=data, kernel=(2,2), pad=(0,0), stride=(2,2), num_filter=256, name='last_deconv')
     data = mx.sym.BatchNorm(data=data, name='last_deconvbn')
     data = mx.sym.Activation(data=data, act_type='relu')
